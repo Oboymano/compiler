@@ -499,13 +499,12 @@ char *yytext;
 #include <math.h>
 #include <ctype.h>
 
-#define YYSTYPE double
 
 #include "bison.tab.h"
 
 float calIndex(char);
+#line 506 "lex.yy.c"
 #line 507 "lex.yy.c"
-#line 508 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -722,9 +721,9 @@ YY_DECL
 		}
 
 	{
-#line 31 "flex.l"
+#line 30 "flex.l"
 
-#line 727 "lex.yy.c"
+#line 726 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -783,171 +782,171 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 32 "flex.l"
-{ yylval = atof(yytext); return T_NUM; }
+#line 31 "flex.l"
+{ yylval.f = atof(yytext); return T_NUM; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 33 "flex.l"
-{ yylval = strtol(yytext, NULL, 16); return T_NUM; }
+#line 32 "flex.l"
+{ yylval.f = strtol(yytext, NULL, 16); return T_NUM; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 34 "flex.l"
+#line 33 "flex.l"
 {return T_EXIT; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 35 "flex.l"
+#line 34 "flex.l"
 { return T_PLUS; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 36 "flex.l"
+#line 35 "flex.l"
 { return T_MINUS; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 37 "flex.l"
+#line 36 "flex.l"
 { return T_MULTIPLY; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 38 "flex.l"
+#line 37 "flex.l"
 { return T_DIVIDE; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 39 "flex.l"
+#line 38 "flex.l"
 { return T_MOD; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 40 "flex.l"
+#line 39 "flex.l"
 { return T_LEFT; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 41 "flex.l"
+#line 40 "flex.l"
 { return T_RIGHT; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 42 "flex.l"
+#line 41 "flex.l"
 { return T_POW; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 43 "flex.l"
+#line 42 "flex.l"
 { return T_COMMA; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 44 "flex.l"
+#line 43 "flex.l"
 { return T_GRATHER; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 45 "flex.l"
+#line 44 "flex.l"
 { return T_LESS; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 46 "flex.l"
+#line 45 "flex.l"
 { return T_GE; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 47 "flex.l"
+#line 46 "flex.l"
 { return T_LE; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 48 "flex.l"
+#line 47 "flex.l"
 { return T_NE; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 49 "flex.l"
+#line 48 "flex.l"
 { return T_NOT; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 50 "flex.l"
+#line 49 "flex.l"
 { return T_EQUAL; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 51 "flex.l"
+#line 50 "flex.l"
 { return T_COLON; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 52 "flex.l"
+#line 51 "flex.l"
 { return T_QUOTE; }
 	YY_BREAK
 case 22:
 /* rule 22 can match eol */
 YY_RULE_SETUP
-#line 53 "flex.l"
+#line 52 "flex.l"
 { return T_LINE; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 55 "flex.l"
+#line 54 "flex.l"
 { return T_COND; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 56 "flex.l"
+#line 55 "flex.l"
 { return T_ELSE; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 57 "flex.l"
+#line 56 "flex.l"
 { return T_LOOP; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 58 "flex.l"
-{ yylval = calIndex(yytext[0]); return T_VAL; }
+#line 57 "flex.l"
+{ yylval.f = calIndex(yytext[0]); return T_VAL; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 59 "flex.l"
+#line 58 "flex.l"
 { return T_HEX; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 60 "flex.l"
+#line 59 "flex.l"
 { return T_PRINT; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 61 "flex.l"
+#line 60 "flex.l"
 { return T_PRINTLN; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 62 "flex.l"
-{ return T_STR; }
+#line 61 "flex.l"
+{ yylval.s=strdup(yytext); return T_STR; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 63 "flex.l"
+#line 62 "flex.l"
 /* eats up white spaces */
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 64 "flex.l"
+#line 63 "flex.l"
 { return yytext[0]; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 66 "flex.l"
+#line 65 "flex.l"
 ECHO;
 	YY_BREAK
-#line 950 "lex.yy.c"
+#line 949 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1952,7 +1951,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 66 "flex.l"
+#line 65 "flex.l"
 
 float calIndex(char yytext){
     double index;

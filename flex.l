@@ -6,7 +6,6 @@
 #include <math.h>
 #include <ctype.h>
 
-#define YYSTYPE double
 
 #include "bison.tab.h"
 
@@ -29,8 +28,8 @@ ws          [ \t]+
 
 
 %%
-{rn}   	{ yylval = atof(yytext); return T_NUM; }
-{hexa}  { yylval = strtol(yytext, NULL, 16); return T_NUM; }
+{rn}   	{ yylval.f = atof(yytext); return T_NUM; }
+{hexa}  { yylval.f = strtol(yytext, NULL, 16); return T_NUM; }
 {exit}  {return T_EXIT; }
 "+"     { return T_PLUS; }
 "-"     { return T_MINUS; }
@@ -55,11 +54,11 @@ ws          [ \t]+
 {cond}		{ return T_COND; }
 {else}		{ return T_ELSE; }
 {loop}		{ return T_LOOP; }
-{val} 		{ yylval = calIndex(yytext[0]); return T_VAL; }
+{val} 		{ yylval.f = calIndex(yytext[0]); return T_VAL; }
 {hex}		{ return T_HEX; }
 {print}		{ return T_PRINT; }
 {println}   { return T_PRINTLN; }
-{str}		{ return T_STR; }
+{str}		{ yylval.s=strdup(yytext); return T_STR; }
 {ws}   /* eats up white spaces */
 .       { return yytext[0]; }
 

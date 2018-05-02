@@ -2,6 +2,7 @@
   #include <math.h>
   #include <stdio.h>
   #include <stdlib.h>
+  #include <string.h>
   #include <ctype.h>
   #include <stdint.h>
   
@@ -12,24 +13,42 @@
   void init_file();
   void fprint(char*,char*);
   void fprintln();
+  int addText(char *);
+  void asmPrint(int,int);
+  void endFile();
   
+  struct text {
+    int id;
+    char *txt;
+    struct text *next;
+  };
+
+  struct text *str;
 
   int errors = 0;
   int done = 0;
+  int id=0;
   double variable[26]={0};
   FILE *fp;
 %}
 
-%define api.value.type {double}
-%token T_GRATHER T_LESS T_GE T_LE T_NE T_NOT T_EQUAL T_POW
-%token T_PLUS T_MINUS T_MULTIPLY T_DIVIDE T_LEFT T_RIGHT  
-%token T_NUM T_COND T_ELSE T_LOOP T_VAL T_PRINT T_PRINTLN 
-%token T_HEX T_STR T_COLON T_QUOTE T_LINE T_COMMA T_EXIT
+%union {
+	double f;
+  char *s;
+}
+
+%token<f> T_GRATHER T_LESS T_GE T_LE T_NE T_NOT T_EQUAL T_POW
+%token<f> T_PLUS T_MINUS T_MULTIPLY T_DIVIDE T_LEFT T_RIGHT  
+%token<f> T_NUM T_COND T_ELSE T_LOOP T_VAL T_PRINT T_PRINTLN 
+%token<f> T_HEX T_COLON T_QUOTE T_LINE T_COMMA T_EXIT
+%token<s> T_STR
 %left T_PLUS T_MINUS
 %left T_DIVIDE T_MULTIPLY T_MOD
 %precedence NEG   
 %right T_POW  
 
+%type<f>  check exp
+%type<f> command
 %%
 input:
   %empty
@@ -48,7 +67,7 @@ line: T_LINE
 | T_VAL T_EQUAL exp T_LINE               { variable[(int)$1]=$3; }
 | command T_LINE  
 | check T_LINE   
-| T_EXIT T_LINE                          { fclose(fp); }                      
+| T_EXIT T_LINE                          { endFile(); }                      
 ;
 
 command: T_PRINT T_LEFT T_VAL T_RIGHT T_LINE                         { printf("%.2f",variable[(int)$3]); }
@@ -60,7 +79,8 @@ command: T_PRINT T_LEFT T_VAL T_RIGHT T_LINE                         { printf("%
 | T_PRINTLN T_LEFT T_VAL T_COMMA T_HEX T_RIGHT T_LINE                { printf("0x%x\n",(int)variable[(int)$3]); }
 | T_PRINT T_LEFT exp T_COMMA T_HEX T_RIGHT T_LINE                    { printf("0x%X",(int)$3); }
 | T_PRINTLN T_LEFT exp T_COMMA T_HEX T_RIGHT T_LINE                  { printf("0x%X\n",(int)$3); }
-| T_PRINT T_LEFT T_QUOTE T_STR T_QUOTE T_RIGHT T_LINE                { printf("%s",$4); }
+| T_PRINT T_LEFT T_QUOTE T_STR T_QUOTE T_RIGHT T_LINE                { asmPrint(addText($4),strlen($4)); }
+| T_PRINTLN T_LEFT T_QUOTE T_STR T_QUOTE T_RIGHT T_LINE              { asmPrint(addText($4),strlen($4)+1); }
 | T_COND T_LEFT check T_RIGHT T_COLON command                        { if($3) $6 ; }
 ;
 
@@ -110,9 +130,10 @@ check: exp T_GRATHER exp                    {
 
 int main(){
     init_file();
+    
     while(1){
-        printf("> ");
-        yyparse();
+      printf("> ");
+      yyparse();
     }
     
 }
@@ -157,4 +178,48 @@ void fprint(char *first,char *second){
 void fprintln(char *label){
   fprintf(fp,"%s\n",label);
 }
-
+void asmPrint(int id,int length){
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,text%d\n",id);
+  fprintf(fp,"\tMOV\trdx,%d\n",length);
+  fprintf(fp,"\tsyscall\n\n");
+}
+int addText(char *txt){
+  struct text *tmp_str = str;
+  int id_return=0;
+  if(tmp_str==NULL){
+    tmp_str = malloc(sizeof(struct text));
+    tmp_str->txt = txt;
+    tmp_str->id=id++;
+    tmp_str->next=NULL;
+    str = tmp_str;
+    id_return=tmp_str->id;
+  }else {
+    while(tmp_str->next!=NULL){
+      tmp_str=tmp_str->next;
+    }
+    tmp_str->next = malloc(sizeof(struct text));
+    tmp_str->next->txt = txt;
+    tmp_str->next->id=id++;
+    id_return=tmp_str->next->id;
+  }
+  return id_return;
+}
+void endFile(){
+  fprintf(fp,"\tMOV\trax,60\n");
+  fprintf(fp,"\tMOV\trdi,0\n");
+  fprintf(fp,"\tsyscall\n\n");
+  if(str!=NULL){
+    fprint("section",".data");
+    fprintln("");
+    while(str->next!=NULL){
+      fprintf(fp,"\ttext%d\tdb\t\'%s\',10",str->id,str->txt);
+      fprintln("");
+      str=str->next;
+    }
+    fprintf(fp,"\ttext%d\tdb\t\'%s\',10",str->id,str->txt);
+    fprintln("");
+  }
+  fclose(fp);
+}

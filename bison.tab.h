@@ -67,12 +67,12 @@ extern int yydebug;
     T_PRINT = 277,
     T_PRINTLN = 278,
     T_HEX = 279,
-    T_STR = 280,
-    T_COLON = 281,
-    T_QUOTE = 282,
-    T_LINE = 283,
-    T_COMMA = 284,
-    T_EXIT = 285,
+    T_COLON = 280,
+    T_QUOTE = 281,
+    T_LINE = 282,
+    T_COMMA = 283,
+    T_EXIT = 284,
+    T_STR = 285,
     T_MOD = 286,
     NEG = 287
   };
@@ -80,7 +80,18 @@ extern int yydebug;
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef double YYSTYPE;
+
+union YYSTYPE
+{
+#line 35 "bison.y" /* yacc.c:1909  */
+
+	double f;
+  char *s;
+
+#line 92 "bison.tab.h" /* yacc.c:1909  */
+};
+
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
