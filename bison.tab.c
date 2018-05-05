@@ -70,6 +70,7 @@
   #include <string.h>
   #include <ctype.h>
   #include <stdint.h>
+  extern FILE *yyin;
   
   int yylex (void);
   void yyerror (char const *);
@@ -80,7 +81,20 @@
   void fprintln();
   int addText(char *);
   void asmPrint(int,int);
+  void asmLineOnly();
   void endFile();
+  struct exp *createExp(double,char,int,struct exp*,struct exp*);
+  struct loop *createLoop(int,int);
+  void printExp(struct exp*);
+  void addValue(int);
+  void condition(char*);
+  void loopFirst(struct loop*);
+  void loopEnd(struct loop*);
+  void printDec();
+  void printHex();
+  void println();
+  void pushAll();
+  void popAll();
   
   struct text {
     int id;
@@ -88,15 +102,31 @@
     struct text *next;
   };
 
+  struct exp {
+    char operation;
+    double value;
+    int type;
+    char position;
+    struct exp *left,*right;
+  };
+
+  struct loop {
+    int id;
+    int number;
+  };
+
   struct text *str;
 
   int errors = 0;
   int done = 0;
-  int id=0;
+  int id=0,pow_id=0,if_id=0,loop_id=0;
   double variable[26]={0};
+  char tmp[2];
   FILE *fp;
 
-#line 100 "bison.tab.c" /* yacc.c:339  */
+  
+
+#line 130 "bison.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -131,6 +161,7 @@ extern int yydebug;
 # define YYTOKENTYPE
   enum yytokentype
   {
+    END_OF_FILE = 0,
     T_GRATHER = 258,
     T_LESS = 259,
     T_GE = 260,
@@ -157,7 +188,7 @@ extern int yydebug;
     T_QUOTE = 281,
     T_LINE = 282,
     T_COMMA = 283,
-    T_EXIT = 284,
+    T_ROUND = 284,
     T_STR = 285,
     T_MOD = 286,
     NEG = 287
@@ -169,12 +200,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 35 "bison.y" /* yacc.c:355  */
+#line 65 "bison.y" /* yacc.c:355  */
 
 	double f;
   char *s;
+  struct exp *e;
+  struct loop *l;
 
-#line 178 "bison.tab.c" /* yacc.c:355  */
+#line 211 "bison.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -191,7 +224,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 195 "bison.tab.c" /* yacc.c:358  */
+#line 228 "bison.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -431,18 +464,18 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  2
+#define YYFINAL  23
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   162
+#define YYLAST   137
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  33
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  6
+#define YYNNTS  8
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  37
+#define YYNRULES  42
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  100
+#define YYNSTATES  102
 
 /* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
    by yylex, with out-of-bounds checking.  */
@@ -489,12 +522,13 @@ static const yytype_uint8 yytranslate[] =
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_uint16 yyrline[] =
 {
-       0,    54,    54,    55,    59,    65,    66,    67,    68,    69,
-      70,    73,    74,    75,    76,    77,    78,    79,    80,    81,
-      82,    83,    84,    87,    88,    89,    90,    91,    92,    93,
-      94,    95,    98,   103,   108,   113,   118,   123
+       0,    90,    90,    94,    95,    98,   101,   108,   109,   110,
+     113,   119,   120,   127,   133,   134,   140,   146,   153,   159,
+     166,   167,   168,   169,   170,   171,   174,   175,   176,   181,
+     186,   191,   196,   201,   206,   210,   213,   220,   227,   234,
+     241,   248,   257
 };
 #endif
 
@@ -503,12 +537,12 @@ static const yytype_uint8 yyrline[] =
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "$end", "error", "$undefined", "T_GRATHER", "T_LESS", "T_GE", "T_LE",
-  "T_NE", "T_NOT", "T_EQUAL", "T_POW", "T_PLUS", "T_MINUS", "T_MULTIPLY",
-  "T_DIVIDE", "T_LEFT", "T_RIGHT", "T_NUM", "T_COND", "T_ELSE", "T_LOOP",
-  "T_VAL", "T_PRINT", "T_PRINTLN", "T_HEX", "T_COLON", "T_QUOTE", "T_LINE",
-  "T_COMMA", "T_EXIT", "T_STR", "T_MOD", "NEG", "$accept", "input", "line",
-  "command", "exp", "check", YY_NULLPTR
+  "END_OF_FILE", "error", "$undefined", "T_GRATHER", "T_LESS", "T_GE",
+  "T_LE", "T_NE", "T_NOT", "T_EQUAL", "T_POW", "T_PLUS", "T_MINUS",
+  "T_MULTIPLY", "T_DIVIDE", "T_LEFT", "T_RIGHT", "T_NUM", "T_COND",
+  "T_ELSE", "T_LOOP", "T_VAL", "T_PRINT", "T_PRINTLN", "T_HEX", "T_COLON",
+  "T_QUOTE", "T_LINE", "T_COMMA", "T_ROUND", "T_STR", "T_MOD", "NEG",
+  "$accept", "prog", "input", "line", "command", "exp", "check", "round", YY_NULLPTR
 };
 #endif
 
@@ -524,10 +558,10 @@ static const yytype_uint16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF -16
+#define YYPACT_NINF -71
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-16)))
+  (!!((Yystate) == (-71)))
 
 #define YYTABLE_NINF -1
 
@@ -536,18 +570,19 @@ static const yytype_uint16 yytoknum[] =
 
   /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
      STATE-NUM.  */
-static const yytype_int16 yypact[] =
+static const yytype_int8 yypact[] =
 {
-     -16,    35,   -16,   123,    87,    87,   -16,   -11,     3,   -10,
-      -2,   -16,    10,   -16,    11,    62,    12,   -16,    30,    97,
-      87,    87,   136,    -6,   -16,   -16,    87,    87,    87,    87,
-      87,    87,    87,    87,    87,    87,    87,   -16,    87,   -16,
-     -16,    74,    25,   106,   -14,    19,    32,    24,     5,    29,
-      84,   111,   111,   111,   111,   111,   111,    30,   116,   116,
-      30,    30,    30,    36,   -16,    27,    31,    44,    55,    66,
-     -16,    64,    68,    75,    76,    82,   -15,   -16,    98,   115,
-     -16,   118,   -16,   120,   127,   -16,   133,   -16,   100,   105,
-     112,   128,   129,   131,   -16,   -16,   -16,   -16,   -16,   -16
+      82,    94,    94,   -71,    -2,     1,    48,    36,    56,    86,
+      23,   -71,   -71,    35,   -71,   -71,    79,    49,    94,    62,
+      94,    75,    67,   -71,   -71,    71,    82,    94,    94,    94,
+      94,    94,    94,    94,    94,    94,    94,    94,    94,   -71,
+      35,    91,   -71,    92,    64,   -14,   -12,    -6,   -71,   -13,
+      51,    42,    82,   -71,    64,    64,    64,    64,    64,    64,
+      79,    54,    54,    79,    79,    79,    85,    87,   -71,    89,
+      95,    97,   -71,    98,   -71,   100,    99,   101,   -71,   102,
+     -71,    96,    96,   104,   112,   113,   114,   115,   116,   117,
+     118,    48,   -71,   -71,   -71,   -71,   -71,   -71,   -71,   -71,
+     -71,   -71
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -555,28 +590,29 @@ static const yytype_int16 yypact[] =
      means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       2,     0,     1,     0,     0,     0,    23,     0,     0,     0,
-       0,     5,     0,     3,     0,     0,     0,     4,    30,     0,
-       0,     0,     0,     0,    10,     8,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     6,     0,     9,
-      31,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,    32,    33,    34,    35,    36,    37,    29,    24,    25,
-      26,    27,    28,     0,     7,     0,     0,     0,     0,     0,
-      14,     0,     0,     0,     0,     0,     0,    11,     0,     0,
-      13,     0,    12,     0,     0,    15,     0,    22,     0,     0,
-       0,     0,     0,     0,    16,    20,    18,    17,    21,    19
+       3,     0,     0,    26,     0,     0,    27,     0,     0,     0,
+       0,     4,     8,     7,     9,    27,    34,     0,     0,     0,
+       0,     0,     0,     1,     2,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,    35,
+       0,     0,    42,     0,    11,    27,     0,     0,    14,    27,
+       0,     0,     0,     5,    36,    37,    38,    39,    40,    41,
+      33,    28,    29,    30,    31,    32,     0,     0,    10,     0,
+       0,     0,    13,     0,    12,     0,     0,     0,    15,     0,
+       6,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,    24,    25,    16,    22,    20,    18,    17,    23,
+      21,    19
 };
 
   /* YYPGOTO[NTERM-NUM].  */
-static const yytype_int16 yypgoto[] =
+static const yytype_int8 yypgoto[] =
 {
-     -16,   -16,   151,    83,    -4,   140
+     -71,   -71,   -71,    17,   -70,    -1,   119,   -71
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     1,    13,    14,    15,    16
+      -1,     9,    10,    11,    12,    13,    14,    43
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -584,78 +620,75 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] =
 {
-      18,    19,    65,     7,    20,    22,     4,     9,    10,     5,
-      47,     6,    21,    23,    66,    48,    41,    43,    46,    50,
-      49,    71,    51,    52,    53,    54,    55,    56,    57,    58,
-      59,    60,    61,    72,    62,     2,     3,    24,    25,    39,
-      32,    63,    32,    33,    34,    35,    36,     4,    68,    67,
-       5,    70,     6,     7,    77,    78,     8,     9,    10,    73,
-      69,    76,    11,    38,    12,    26,    27,    28,    29,    30,
-      79,    31,    32,    33,    34,    35,    36,    26,    27,    28,
-      29,    30,    80,    31,    32,    33,    34,    35,    36,    37,
-      81,    82,    83,    38,    32,    33,    34,    35,    36,     4,
-      74,    84,     5,    85,     6,    38,    86,    32,    33,    34,
-      35,    36,    75,    40,    88,    38,    32,    33,    34,    35,
-      36,    32,    33,    34,    35,    36,    32,    94,    38,    35,
-      36,    89,    95,    64,    90,     4,    91,    38,     5,    96,
-       6,     7,    38,    92,     8,     9,    10,    38,     4,    93,
-      11,     5,    12,     6,    17,    97,    98,    44,    99,    87,
-      42,     0,    45
+      16,    17,    68,    74,    33,    34,    35,    36,    37,    70,
+      72,    92,    93,    18,    69,    75,    19,    40,    71,    44,
+      47,    51,    73,    24,    25,    38,    54,    55,    56,    57,
+      58,    59,    60,    61,    62,    63,    64,    65,    27,    28,
+      29,    30,    31,    53,    32,    33,    34,    35,    36,    37,
+      26,    21,    33,    34,    35,    36,    37,    20,    78,    33,
+      34,    35,    36,    37,    33,    39,    38,    36,    37,    80,
+      79,    22,    76,    38,    33,    34,    35,    36,    37,     1,
+      38,    77,     2,    48,     3,    38,    23,     1,    49,    33,
+       2,    42,     3,    50,     1,    38,    45,     2,    52,     3,
+       4,    46,     5,     6,     7,     8,     1,    66,    67,     2,
+      81,     3,    82,    83,     4,    15,     5,    91,     7,     8,
+      94,    84,    86,    85,    87,    88,    90,    89,    95,    96,
+      97,    98,    99,   100,   101,     0,     0,    41
 };
 
 static const yytype_int8 yycheck[] =
 {
-       4,     5,    16,    18,    15,    15,    12,    22,    23,    15,
-      16,    17,     9,    15,    28,    21,    20,    21,    22,    23,
-      26,    16,    26,    27,    28,    29,    30,    31,    32,    33,
-      34,    35,    36,    28,    38,     0,     1,    27,    27,    27,
-      10,    16,    10,    11,    12,    13,    14,    12,    16,    30,
-      15,    27,    17,    18,    27,    24,    21,    22,    23,    30,
-      28,    25,    27,    31,    29,     3,     4,     5,     6,     7,
-      26,     9,    10,    11,    12,    13,    14,     3,     4,     5,
-       6,     7,    27,     9,    10,    11,    12,    13,    14,    27,
-      24,    27,    24,    31,    10,    11,    12,    13,    14,    12,
-      16,    26,    15,    27,    17,    31,    24,    10,    11,    12,
-      13,    14,    28,    16,    16,    31,    10,    11,    12,    13,
-      14,    10,    11,    12,    13,    14,    10,    27,    31,    13,
-      14,    16,    27,    27,    16,    12,    16,    31,    15,    27,
-      17,    18,    31,    16,    21,    22,    23,    31,    12,    16,
-      27,    15,    29,    17,     3,    27,    27,    21,    27,    76,
-      20,    -1,    26
+       1,     2,    16,    16,    10,    11,    12,    13,    14,    21,
+      16,    81,    82,    15,    28,    28,    15,    18,    30,    20,
+      21,    22,    28,     0,     1,    31,    27,    28,    29,    30,
+      31,    32,    33,    34,    35,    36,    37,    38,     3,     4,
+       5,     6,     7,    26,     9,    10,    11,    12,    13,    14,
+      27,    15,    10,    11,    12,    13,    14,     9,    16,    10,
+      11,    12,    13,    14,    10,    16,    31,    13,    14,    52,
+      28,    15,    21,    31,    10,    11,    12,    13,    14,    12,
+      31,    30,    15,    16,    17,    31,     0,    12,    21,    10,
+      15,    29,    17,    26,    12,    31,    21,    15,    27,    17,
+      18,    26,    20,    21,    22,    23,    12,    16,    16,    15,
+      25,    17,    25,    24,    18,    21,    20,    21,    22,    23,
+      16,    26,    24,    26,    24,    26,    24,    26,    16,    16,
+      16,    16,    16,    16,    16,    -1,    -1,    18
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,    34,     0,     1,    12,    15,    17,    18,    21,    22,
-      23,    27,    29,    35,    36,    37,    38,    35,    37,    37,
-      15,     9,    15,    15,    27,    27,     3,     4,     5,     6,
-       7,     9,    10,    11,    12,    13,    14,    27,    31,    27,
-      16,    37,    38,    37,    21,    26,    37,    16,    21,    26,
-      37,    37,    37,    37,    37,    37,    37,    37,    37,    37,
-      37,    37,    37,    16,    27,    16,    28,    30,    16,    28,
-      27,    16,    28,    30,    16,    28,    25,    27,    24,    26,
-      27,    24,    27,    24,    26,    27,    24,    36,    16,    16,
-      16,    16,    16,    16,    27,    27,    27,    27,    27,    27
+       0,    12,    15,    17,    18,    20,    21,    22,    23,    34,
+      35,    36,    37,    38,    39,    21,    38,    38,    15,    15,
+       9,    15,    15,     0,     0,     1,    27,     3,     4,     5,
+       6,     7,     9,    10,    11,    12,    13,    14,    31,    16,
+      38,    39,    29,    40,    38,    21,    26,    38,    16,    21,
+      26,    38,    27,    36,    38,    38,    38,    38,    38,    38,
+      38,    38,    38,    38,    38,    38,    16,    16,    16,    28,
+      21,    30,    16,    28,    16,    28,    21,    30,    16,    28,
+      36,    25,    25,    24,    26,    26,    24,    24,    26,    26,
+      24,    21,    37,    37,    16,    16,    16,    16,    16,    16,
+      16,    16
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    33,    34,    34,    34,    35,    35,    35,    35,    35,
-      35,    36,    36,    36,    36,    36,    36,    36,    36,    36,
-      36,    36,    36,    37,    37,    37,    37,    37,    37,    37,
-      37,    37,    38,    38,    38,    38,    38,    38
+       0,    33,    34,    35,    35,    35,    35,    36,    36,    36,
+      37,    37,    37,    37,    37,    37,    37,    37,    37,    37,
+      37,    37,    37,    37,    37,    37,    38,    38,    38,    38,
+      38,    38,    38,    38,    38,    38,    39,    39,    39,    39,
+      39,    39,    40
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     0,     2,     3,     1,     2,     4,     2,     2,
-       2,     5,     5,     5,     4,     5,     7,     7,     7,     7,
-       7,     7,     6,     1,     3,     3,     3,     3,     3,     3,
-       2,     3,     3,     3,     3,     3,     3,     3
+       0,     2,     2,     0,     1,     3,     4,     1,     1,     1,
+       4,     3,     4,     4,     3,     4,     6,     6,     6,     6,
+       6,     6,     6,     6,     6,     6,     1,     1,     3,     3,
+       3,     3,     3,     3,     2,     3,     3,     3,     3,     3,
+       3,     3,     1
 };
 
 
@@ -1331,230 +1364,352 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 3:
-#line 55 "bison.y" /* yacc.c:1646  */
-    {
-      printf("> ");
-      errors=0;
-  }
-#line 1341 "bison.tab.c" /* yacc.c:1646  */
+        case 2:
+#line 90 "bison.y" /* yacc.c:1646  */
+    { endFile(); }
+#line 1371 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 59 "bison.y" /* yacc.c:1646  */
+#line 95 "bison.y" /* yacc.c:1646  */
+    {
+
+  }
+#line 1379 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 5:
+#line 98 "bison.y" /* yacc.c:1646  */
+    {
+      errors=0;
+  }
+#line 1387 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 6:
+#line 101 "bison.y" /* yacc.c:1646  */
     {
       errors = 0;
       YYABORT;
   }
-#line 1350 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 6:
-#line 66 "bison.y" /* yacc.c:1646  */
-    { printf("%g\n",(yyvsp[-1].f)); }
-#line 1356 "bison.tab.c" /* yacc.c:1646  */
+#line 1396 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 67 "bison.y" /* yacc.c:1646  */
-    { variable[(int)(yyvsp[-3].f)]=(yyvsp[-1].f); }
-#line 1362 "bison.tab.c" /* yacc.c:1646  */
+#line 108 "bison.y" /* yacc.c:1646  */
+    { printExp((yyvsp[0].e)); }
+#line 1402 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 70 "bison.y" /* yacc.c:1646  */
-    { endFile(); }
-#line 1368 "bison.tab.c" /* yacc.c:1646  */
+#line 113 "bison.y" /* yacc.c:1646  */
+    { 
+                                                                  fprintf(fp,"\tMOV\trax,[value+%d]\n",(int)(yyvsp[-1].f)*8);  
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintDec\n\n"); 
+                                                                  popAll();
+                                                               }
+#line 1413 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 73 "bison.y" /* yacc.c:1646  */
-    { printf("%.2f",variable[(int)(yyvsp[-2].f)]); }
-#line 1374 "bison.tab.c" /* yacc.c:1646  */
+#line 119 "bison.y" /* yacc.c:1646  */
+    { printExp((yyvsp[0].e)); addValue((int)(yyvsp[-2].f)); }
+#line 1419 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 74 "bison.y" /* yacc.c:1646  */
-    { printf("%.2f\n",variable[(int)(yyvsp[-2].f)]); }
-#line 1380 "bison.tab.c" /* yacc.c:1646  */
+#line 120 "bison.y" /* yacc.c:1646  */
+    { 
+                                                                  fprintf(fp,"\tMOV\trax,[value+%d]\n",(int)(yyvsp[-1].f)*8);  
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintDec\n\n"); 
+                                                                  popAll();
+                                                                  fprintf(fp,"\tCALL\tprintLineOnly\n\n");
+                                                               }
+#line 1431 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 75 "bison.y" /* yacc.c:1646  */
-    { printf("%.2f",(yyvsp[-2].f)); }
-#line 1386 "bison.tab.c" /* yacc.c:1646  */
+#line 127 "bison.y" /* yacc.c:1646  */
+    { 
+                                                                  printExp((yyvsp[-1].e));  
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintDec\n\n"); 
+                                                                  popAll();
+                                                               }
+#line 1442 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 76 "bison.y" /* yacc.c:1646  */
-    { printf("\n"); }
-#line 1392 "bison.tab.c" /* yacc.c:1646  */
+#line 133 "bison.y" /* yacc.c:1646  */
+    { fprintf(fp,"\tCALL\tprintLineOnly\n\n"); }
+#line 1448 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 77 "bison.y" /* yacc.c:1646  */
-    { printf("%.2f\n",(yyvsp[-2].f)); }
-#line 1398 "bison.tab.c" /* yacc.c:1646  */
+#line 134 "bison.y" /* yacc.c:1646  */
+    { 
+                                                                  printExp((yyvsp[-1].e));
+                                                                  pushAll(); 
+                                                                  fprintf(fp,"\tCALL\tprintDec\n\n"); 
+                                                                  popAll();
+                                                               }
+#line 1459 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 78 "bison.y" /* yacc.c:1646  */
-    { printf("0x%X",(int)variable[(int)(yyvsp[-4].f)]); }
-#line 1404 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 17:
-#line 79 "bison.y" /* yacc.c:1646  */
-    { printf("0x%x\n",(int)variable[(int)(yyvsp[-4].f)]); }
-#line 1410 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 18:
-#line 80 "bison.y" /* yacc.c:1646  */
-    { printf("0x%X",(int)(yyvsp[-4].f)); }
-#line 1416 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 19:
-#line 81 "bison.y" /* yacc.c:1646  */
-    { printf("0x%X\n",(int)(yyvsp[-4].f)); }
-#line 1422 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 20:
-#line 82 "bison.y" /* yacc.c:1646  */
-    { asmPrint(addText((yyvsp[-3].s)),strlen((yyvsp[-3].s))); }
-#line 1428 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 21:
-#line 83 "bison.y" /* yacc.c:1646  */
-    { asmPrint(addText((yyvsp[-3].s)),strlen((yyvsp[-3].s))+1); }
-#line 1434 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 22:
-#line 84 "bison.y" /* yacc.c:1646  */
-    { if((yyvsp[-3].f)) (yyvsp[0].f) ; }
-#line 1440 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 23:
-#line 87 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = (yyvsp[0].f); }
-#line 1446 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 24:
-#line 88 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = (yyvsp[-2].f) + (yyvsp[0].f); }
-#line 1452 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 25:
-#line 89 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = (yyvsp[-2].f) - (yyvsp[0].f); }
-#line 1458 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 26:
-#line 90 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = (yyvsp[-2].f) * (yyvsp[0].f); }
-#line 1464 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 27:
-#line 91 "bison.y" /* yacc.c:1646  */
-    { if(check_divider((yyvsp[0].f))) {(yyval.f) = (yyvsp[-2].f) / (yyvsp[0].f);}else YYABORT; }
+#line 140 "bison.y" /* yacc.c:1646  */
+    {  
+                                                                  fprintf(fp,"\tMOV\trax,[value+%d]\n",(int)(yyvsp[-3].f)*8);  
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintHex\n\n"); 
+                                                                  popAll();
+                                                               }
 #line 1470 "bison.tab.c" /* yacc.c:1646  */
     break;
 
-  case 28:
-#line 92 "bison.y" /* yacc.c:1646  */
-    { if(check_mod((yyvsp[0].f))) {(yyval.f) = (int)(yyvsp[-2].f) % (int)(yyvsp[0].f);} else YYABORT; }
-#line 1476 "bison.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 29:
-#line 93 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = pow((yyvsp[-2].f),(yyvsp[0].f)); }
+  case 17:
+#line 146 "bison.y" /* yacc.c:1646  */
+    {  
+                                                                  fprintf(fp,"\tMOV\trax,[value+%d]\n",(int)(yyvsp[-3].f)*8);  
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintHex\n\n"); 
+                                                                  popAll();
+                                                                  fprintf(fp,"\tCALL\tprintLineOnly\n\n");
+                                                               }
 #line 1482 "bison.tab.c" /* yacc.c:1646  */
     break;
 
+  case 18:
+#line 153 "bison.y" /* yacc.c:1646  */
+    { 
+                                                                  printExp((yyvsp[-3].e)); 
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintHex\n\n"); 
+                                                                  popAll();
+                                                               }
+#line 1493 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 19:
+#line 159 "bison.y" /* yacc.c:1646  */
+    { 
+                                                                  printExp((yyvsp[-3].e)); 
+                                                                  pushAll();
+                                                                  fprintf(fp,"\tCALL\tprintHex\n\n"); 
+                                                                  popAll(); 
+                                                                  fprintf(fp,"\tCALL\tprintLineOnly\n\n");
+                                                               }
+#line 1505 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 20:
+#line 166 "bison.y" /* yacc.c:1646  */
+    { asmPrint(addText((yyvsp[-2].s)),strlen((yyvsp[-2].s))); }
+#line 1511 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 21:
+#line 167 "bison.y" /* yacc.c:1646  */
+    { asmPrint(addText((yyvsp[-2].s)),strlen((yyvsp[-2].s))+1); }
+#line 1517 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 22:
+#line 168 "bison.y" /* yacc.c:1646  */
+    { sprintf(tmp,"%c",'A'+(int)(yyvsp[-2].f)); asmPrint(addText(tmp),1); }
+#line 1523 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 23:
+#line 169 "bison.y" /* yacc.c:1646  */
+    { sprintf(tmp,"%c",'A'+(int)(yyvsp[-2].f)); asmPrint(addText(tmp),2); }
+#line 1529 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 24:
+#line 170 "bison.y" /* yacc.c:1646  */
+    { fprintf(fp,"if_done%d:\n",if_id++); }
+#line 1535 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 25:
+#line 171 "bison.y" /* yacc.c:1646  */
+    { loopEnd((yyvsp[-3].l)); }
+#line 1541 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 26:
+#line 174 "bison.y" /* yacc.c:1646  */
+    { (yyval.e) = createExp((yyvsp[0].f),' ',1,NULL,NULL); }
+#line 1547 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 27:
+#line 175 "bison.y" /* yacc.c:1646  */
+    { (yyval.e) = createExp((yyvsp[0].f),' ',2,NULL,NULL); }
+#line 1553 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 28:
+#line 176 "bison.y" /* yacc.c:1646  */
+    { 
+                                              (yyvsp[-2].e)->position = 'l';
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'+',0,(yyvsp[-2].e),(yyvsp[0].e));
+                                             }
+#line 1563 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 29:
+#line 181 "bison.y" /* yacc.c:1646  */
+    { 
+                                              (yyvsp[-2].e)->position = 'l';
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'-',0,(yyvsp[-2].e),(yyvsp[0].e));
+                                             }
+#line 1573 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
   case 30:
-#line 94 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = -(yyvsp[0].f); }
-#line 1488 "bison.tab.c" /* yacc.c:1646  */
+#line 186 "bison.y" /* yacc.c:1646  */
+    { 
+                                              (yyvsp[-2].e)->position = 'l';
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'*',0,(yyvsp[-2].e),(yyvsp[0].e));
+                                            }
+#line 1583 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 95 "bison.y" /* yacc.c:1646  */
-    { (yyval.f) = (yyvsp[-1].f); }
-#line 1494 "bison.tab.c" /* yacc.c:1646  */
+#line 191 "bison.y" /* yacc.c:1646  */
+    { 
+                                              (yyvsp[-2].e)->position = 'l';
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'/',0,(yyvsp[-2].e),(yyvsp[0].e));
+                                            }
+#line 1593 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 98 "bison.y" /* yacc.c:1646  */
+#line 196 "bison.y" /* yacc.c:1646  */
     { 
-                                              if((yyvsp[-2].f) > (yyvsp[0].f)){
-                                                 (yyval.f) = 1;
-                                              } else {(yyval.f) = 0;} 
+                                              (yyvsp[-2].e)->position = 'l';
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'%',0,(yyvsp[-2].e),(yyvsp[0].e));
                                             }
-#line 1504 "bison.tab.c" /* yacc.c:1646  */
+#line 1603 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 103 "bison.y" /* yacc.c:1646  */
+#line 201 "bison.y" /* yacc.c:1646  */
     { 
-                                              if((yyvsp[-2].f) < (yyvsp[0].f)){
-                                                (yyval.f) = 1;
-                                              }else {(yyval.f) = 0;} 
+                                              (yyvsp[-2].e)->position = 'l';
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'^',0,(yyvsp[-2].e),(yyvsp[0].e));
                                             }
-#line 1514 "bison.tab.c" /* yacc.c:1646  */
+#line 1613 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 108 "bison.y" /* yacc.c:1646  */
+#line 206 "bison.y" /* yacc.c:1646  */
     { 
-                                              if((yyvsp[-2].f) >= (yyvsp[0].f)){
-                                              (yyval.f) = 1;
-                                              }else {(yyval.f) = 0;} 
+                                              (yyvsp[0].e)->position = 'r';
+                                              (yyval.e) = createExp(0,'_',0,NULL,(yyvsp[0].e)); 
                                             }
-#line 1524 "bison.tab.c" /* yacc.c:1646  */
+#line 1622 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 113 "bison.y" /* yacc.c:1646  */
-    { 
-                                              if((yyvsp[-2].f) <= (yyvsp[0].f)){
-                                              (yyval.f) = 1;
-                                              }else {(yyval.f) = 0;} 
-                                            }
-#line 1534 "bison.tab.c" /* yacc.c:1646  */
+#line 210 "bison.y" /* yacc.c:1646  */
+    { (yyval.e) = createExp(0,(yyvsp[-1].e),1,NULL,NULL); }
+#line 1628 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 118 "bison.y" /* yacc.c:1646  */
+#line 213 "bison.y" /* yacc.c:1646  */
     { 
-                                              if((yyvsp[-2].f) != (yyvsp[0].f)){
-                                              (yyval.f) = 1;
-                                              }else {(yyval.f) = 0;} 
+                                              printExp((yyvsp[-2].e));
+                                              fprintf(fp,"\tPUSH\trax\n");
+                                              printExp((yyvsp[0].e));
+                                              fprintf(fp,"\tPOP\trbx\n");
+                                              condition(">");
                                             }
-#line 1544 "bison.tab.c" /* yacc.c:1646  */
+#line 1640 "bison.tab.c" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 123 "bison.y" /* yacc.c:1646  */
+#line 220 "bison.y" /* yacc.c:1646  */
     { 
-                                              if((yyvsp[-2].f) == (yyvsp[0].f)){
-                                              (yyval.f) = 1;
-                                              }else {(yyval.f) = 0;} 
+                                              printExp((yyvsp[-2].e));
+                                              fprintf(fp,"\tPUSH\trax\n");
+                                              printExp((yyvsp[0].e));
+                                              fprintf(fp,"\tPOP\trbx\n");
+                                              condition("<");
                                             }
-#line 1554 "bison.tab.c" /* yacc.c:1646  */
+#line 1652 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 38:
+#line 227 "bison.y" /* yacc.c:1646  */
+    { 
+                                              printExp((yyvsp[-2].e));
+                                              fprintf(fp,"\tPUSH\trax\n");
+                                              printExp((yyvsp[0].e));
+                                              fprintf(fp,"\tPOP\trbx\n");
+                                              condition(">=");
+                                            }
+#line 1664 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 39:
+#line 234 "bison.y" /* yacc.c:1646  */
+    { 
+                                              printExp((yyvsp[-2].e));
+                                              fprintf(fp,"\tPUSH\trax\n");
+                                              printExp((yyvsp[0].e));
+                                              fprintf(fp,"\tPOP\trbx\n");
+                                              condition("<=");
+                                            }
+#line 1676 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 40:
+#line 241 "bison.y" /* yacc.c:1646  */
+    { 
+                                              printExp((yyvsp[-2].e));
+                                              fprintf(fp,"\tPUSH\trax\n");
+                                              printExp((yyvsp[0].e));
+                                              fprintf(fp,"\tPOP\trbx\n");
+                                              condition("!=");
+                                            }
+#line 1688 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 41:
+#line 248 "bison.y" /* yacc.c:1646  */
+    { 
+                                              printExp((yyvsp[-2].e));
+                                              fprintf(fp,"\tPUSH\trax\n");
+                                              printExp((yyvsp[0].e));
+                                              fprintf(fp,"\tPOP\trbx\n");
+                                              condition("=");
+                                            }
+#line 1700 "bison.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 42:
+#line 257 "bison.y" /* yacc.c:1646  */
+    {
+                                              (yyval.l)=createLoop(loop_id++,(int)(yyvsp[0].f));
+                                              loopFirst((yyval.l));
+                                            }
+#line 1709 "bison.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1558 "bison.tab.c" /* yacc.c:1646  */
+#line 1713 "bison.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1782,16 +1937,18 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 129 "bison.y" /* yacc.c:1906  */
+#line 261 "bison.y" /* yacc.c:1906  */
 
 
 int main(){
+  
     init_file();
     
-    while(1){
-      printf(">");
-      yyparse();
-    }
+    yyin = fopen("com.txt","r");
+    
+    yyparse();
+
+    fclose(yyin);
     
 }
 
@@ -1821,6 +1978,18 @@ int check_mod(int mod)
   }
   return 1;
 }
+
+struct exp * createExp(double value,char operation,int type,struct exp *left,struct exp *right){
+  struct exp *exps = malloc(sizeof(struct exp));
+  exps->value = value;
+  exps->operation = operation;
+  exps->type = type;
+  exps->position = ' ';
+  exps->left = left;
+  exps->right = right;
+  return exps;
+}
+
 void init_file(){
   fp = fopen("file.asm","w");
   fprint("section",".text");
@@ -1840,6 +2009,13 @@ void asmPrint(int id,int length){
   fprintf(fp,"\tMOV\trdi,1\n");
   fprintf(fp,"\tMOV\trsi,text%d\n",id);
   fprintf(fp,"\tMOV\trdx,%d\n",length);
+  fprintf(fp,"\tsyscall\n\n");
+}
+void asmLineOnly(){
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,line\n");
+  fprintf(fp,"\tMOV\trdx,1\n");
   fprintf(fp,"\tsyscall\n\n");
 }
 int addText(char *txt){
@@ -1867,9 +2043,16 @@ void endFile(){
   fprintf(fp,"\tMOV\trax,60\n");
   fprintf(fp,"\tMOV\trdi,0\n");
   fprintf(fp,"\tsyscall\n\n");
+  printDec();
+  printHex();
+  println();
+  fprint("section",".data");
+  fprintln("");
+  fprintf(fp,"\tline\tdb 0x0A\n");
+  fprintf(fp,"\tvalue\tTIMES 26 DQ 0\n");
+  fprintf(fp,"\tbuffer\tresb\t20\n");
+  fprintf(fp,"\tminus\tdb\t\'-\'\n");
   if(str!=NULL){
-    fprint("section",".data");
-    fprintln("");
     while(str->next!=NULL){
       fprintf(fp,"\ttext%d\tdb\t\'%s\',10",str->id,str->txt);
       fprintln("");
@@ -1880,3 +2063,257 @@ void endFile(){
   }
   fclose(fp);
 }
+void printExp(struct exp *exps){
+
+  if(exps->left!=NULL)
+    printExp(exps->left);
+  if(exps->right!=NULL){
+    fprintf(fp,"\tPUSH\tr8\n");
+    printExp(exps->right);
+    fprintf(fp,"\tPOP\tr8\n");
+  }
+
+  if(exps->type==0){
+    if(exps->operation=='+'){
+        if(exps->position=='l'){
+          fprintf(fp,"\tADD\tr8,r9\n");
+        }else if(exps->position=='r') {
+          fprintf(fp,"\tADD\tr9,r8\n");
+        }else if(exps->position==' ') {
+          fprintf(fp,"\tADD\tr8,r9\n");
+          fprintf(fp,"\tMOV\trax,r8\n\n");
+        }
+    } else if(exps->operation=='-'){ 
+        if(exps->position=='l'){
+          fprintf(fp,"\tSUB\tr8,r9\n");
+        }else if(exps->position=='r'){
+          fprintf(fp,"\tSUB\tr9,r8\n");
+        }else {
+          fprintf(fp,"\tSUB\tr8,r9\n");
+          fprintf(fp,"\tMOV\trax,r8\n\n");
+        }
+    } else if(exps->operation=='*'){ 
+        fprintf(fp,"\tMOV\trax,r8\n");
+        fprintf(fp,"\tIMUL\tr9\n");
+        if(exps->position=='l'){
+          fprintf(fp,"\tMOV\tr8,rax\n");
+        }else if(exps->position=='r'){
+          fprintf(fp,"\tMOV\tr9,rax\n");
+        }else {
+          fprintf(fp,"\n");
+        }
+    } else if(exps->operation=='/'){ 
+        fprintf(fp,"\tMOV\trax,r8\n");
+        fprintf(fp,"\tIDIV\tr9\n");
+        if(exps->position=='l'){
+          fprintf(fp,"\tMOV\tr8,rax");
+        }else if(exps->position=='r'){
+          fprintf(fp,"\tMOV\tr9,rax\n");
+        }else {
+          fprintf(fp,"\n");
+        }
+    } else if(exps->operation=='%'){
+        fprintf(fp,"\tMOV\trax,r8\n");
+        fprintf(fp,"\tIDIV\tr9\n");
+        if(exps->position=='l'){
+          fprintf(fp,"\tMOV\tr8,rdx");
+        }else if(exps->position=='r'){
+          fprintf(fp,"\tMOV\tr9,rdx\n");
+        }else {
+          fprintf(fp,"\n");
+        }
+    } else if(exps->operation=='_'){
+        fprintf(fp,"\tNEG\tr9\n");
+        if(exps->position=='l'){
+          fprintf(fp,"\tMOV\tr8,r9\n");
+        }else if(exps->position=='r'){
+          //fprintf(fp,"\tMOV\tr9,rdx\n");
+        }else {
+          fprintf(fp,"\tMOV\trax,r9\n\n");
+        }
+    }
+  } else if(exps->type==1){
+    if(exps->position=='l'){
+      fprintf(fp,"\tMOV\tr8,%d\n",(int)exps->value);
+    }else if(exps->position=='r'){
+      fprintf(fp,"\tMOV\tr9,%d\n",(int)exps->value);
+    }else if(exps->position==' '){
+      fprintf(fp,"\tMOV\trax,%d\n\n",(int)exps->value);
+    }
+    
+  } else if(exps->type==2){
+    if(exps->position=='l'){
+      fprintf(fp,"\tMOV\tr8,[value+%d]\n",(int)exps->value*8);
+    }else if(exps->position=='r'){
+      fprintf(fp,"\tMOV\tr9,[value+%d]\n",(int)exps->value*8);
+    }else if(exps->position==' '){
+      fprintf(fp,"\tMOV\trax,[value+%d]\n",(int)exps->value*8);
+    }
+  }
+}
+void addValue(int id){
+  fprintf(fp,"\tMOV\t[value+%d],rax\n",id*8);
+}
+void condition(char *operation){
+  fprintf(fp,"\tCMP\trbx,rax\n");
+  if(!strcmp(operation,">")){
+    fprintf(fp,"\tJLE\tif_done%d\n",if_id);
+  }else if(!strcmp(operation,"<")){
+    fprintf(fp,"\tJGE\tif_done%d\n",if_id);
+  }else if(!strcmp(operation,">=")){
+    fprintf(fp,"\tJL\tif_done%d\n",if_id);
+  }else if(!strcmp(operation,"!=")){
+    fprintf(fp,"\tJE\tif_done%d\n",if_id);
+  }else if(!strcmp(operation,"=")){
+    fprintf(fp,"\tJNE\tif_done%d\n",if_id);
+  }
+  //fprintf();
+}
+struct loop *createLoop(int id,int number){
+  struct loop *loops = malloc(sizeof(struct loop));
+  loops->id = id;
+  loops->number = number;
+  return loops;
+}
+void loopFirst(struct loop* loops){
+  fprintf(fp,"\tPUSH\tr10\n");
+  fprintf(fp,"\tMOV\tr10,%d\n",loops->number);
+  fprintf(fp,"loop%d:\n",loops->id);
+}
+void loopEnd(struct loop* loops){
+  fprintf(fp,"\tDEC\tr10\n");
+  fprintf(fp,"\tCMP\tr10,1\n");
+  fprintf(fp,"\tJGE\tloop%d\n",loops->id);
+  fprintf(fp,"\tPOP\tr10\n");
+}
+void printDec(){
+  fprintf(fp,"printDec:\n");
+  fprintf(fp,"\tMOV\tr10,0\n");
+  fprintf(fp,"\tMOV\tr11,0\n");
+  fprintf(fp,"\tLEA\trdi,[buffer+19]\n");
+  fprintf(fp,"\tXOR\trdx,rdx\n");
+  fprintf(fp,"\tCMP\trax,0\n");
+  fprintf(fp,"\tJGE\tnot_zero\n");
+  fprintf(fp,"\tNEG\trax\n");
+  fprintf(fp,"\tMOV\tr11,1\n");
+  fprintf(fp,"not_zero:\n");
+  fprintf(fp,"\tMOV\trbx,10\n");
+  fprintf(fp,"\tdiv\trbx\n");
+  fprintf(fp,"\tadd\trdx,'0'\n");
+  fprintf(fp,"\tmov\tbyte[rdi],dl\n");
+  fprintf(fp,"\tdec\trdi\n");
+  fprintf(fp,"\tinc\tr10\n");
+  fprintf(fp,"\txor\trdx,rdx\n");
+  fprintf(fp,"\tcmp\trax,0\n");
+  fprintf(fp,"\tjne\tnot_zero\n");
+  fprintf(fp,"\tcmp\tr11,1\n");
+  fprintf(fp,"\tJNE\tplus\n");
+  fprintf(fp,"\tPUSH\trax\n");
+  fprintf(fp,"\tPUSH\trdi\n");
+  fprintf(fp,"\tPUSH\trdx\n");
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,minus\n");
+  fprintf(fp,"\tMOV\trdx,1\n");
+  fprintf(fp,"\tsyscall\n");
+  fprintf(fp,"\tPOP\trax\n");
+  fprintf(fp,"\tPOP\trdi\n");
+  fprintf(fp,"\tPOP\trdx\n");
+  fprintf(fp,"plus:\n");
+  fprintf(fp,"\tINC\trdi\n");
+  fprintf(fp,"\tMOV\trbx,rdi\n");
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,rbx\n");
+  fprintf(fp,"\tMOV\trdx,r10\n");
+  fprintf(fp,"\tsyscall\n");
+  fprintf(fp,"\tret\n\n");
+}
+void printHex(){
+  fprintf(fp,"printHex:\n");
+  fprintf(fp,"\tMOV\tr10,0\n");
+  fprintf(fp,"\tMOV\tr11,0\n");
+  fprintf(fp,"\tLEA\trdi,[buffer+19]\n");
+  fprintf(fp,"\tXOR\trdx,rdx\n");
+  fprintf(fp,"\tCMP\trax,0\n");
+  fprintf(fp,"\tJGE\tnot_zeroHex\n");
+  fprintf(fp,"\tNEG\trax\n");
+  fprintf(fp,"\tMOV\tr11,1\n");
+  fprintf(fp,"not_zeroHex:\n");
+  fprintf(fp,"\tMOV\trbx,16\n");
+  fprintf(fp,"\tdiv\trbx\n");
+  fprintf(fp,"\tCALL\tconvert\n");
+  fprintf(fp,"\tmov\tbyte[rdi],dl\n");
+  fprintf(fp,"\tdec\trdi\n");
+  fprintf(fp,"\tinc\tr10\n");
+  fprintf(fp,"\txor\trdx,rdx\n");
+  fprintf(fp,"\tcmp\trax,0\n");
+  fprintf(fp,"\tjne\tnot_zeroHex\n");
+  fprintf(fp,"\tcmp\tr11,1\n");
+  fprintf(fp,"\tJNE\tplusHex\n");
+  fprintf(fp,"\tPUSH\trax\n");
+  fprintf(fp,"\tPUSH\trdi\n");
+  fprintf(fp,"\tPUSH\trdx\n");
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,minus\n");
+  fprintf(fp,"\tMOV\trdx,1\n");
+  fprintf(fp,"\tsyscall\n");
+  fprintf(fp,"\tPOP\trax\n");
+  fprintf(fp,"\tPOP\trdi\n");
+  fprintf(fp,"\tPOP\trdx\n");
+  fprintf(fp,"plusHex:\n");
+  fprintf(fp,"\tINC\trdi\n");
+  fprintf(fp,"\tMOV\trbx,rdi\n");
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,rbx\n");
+  fprintf(fp,"\tMOV\trdx,r10\n");
+  fprintf(fp,"\tsyscall\n");
+  fprintf(fp,"\tret\n\n");
+  fprintf(fp,"convert:\n");
+  fprintf(fp,"\tCMP\trdx,10\n");
+  fprintf(fp,"\tJL\tconvert_done\n");
+  fprintf(fp,"\tADD\trdx,0x7\n");
+  fprintf(fp,"convert_done:\n");
+  fprintf(fp,"\tADD\trdx,0x30\n");
+  fprintf(fp,"\tret\n\n");
+}
+void pushAll(){
+  fprintf(fp,"\tPUSH\tr10\n");
+  fprintf(fp,"\tPUSH\tr11\n");
+  fprintf(fp,"\tPUSH\trdi\n");
+  fprintf(fp,"\tPUSH\trdx\n");
+  fprintf(fp,"\tPUSH\trax\n");
+  fprintf(fp,"\tPUSH\trbx\n\n");
+}
+void popAll(){
+  fprintf(fp,"\tPOP\trbx\n");
+  fprintf(fp,"\tPOP\trax\n");
+  fprintf(fp,"\tPOP\trdx\n");
+  fprintf(fp,"\tPOP\trdi\n");
+  fprintf(fp,"\tPOP\tr11\n");
+  fprintf(fp,"\tPOP\tr10\n\n");
+}
+void println(){
+  fprintf(fp,"printLineOnly:\n");
+  fprintf(fp,"\tMOV\trax,1\n");
+  fprintf(fp,"\tMOV\trdi,1\n");
+  fprintf(fp,"\tMOV\trsi,line\n");
+  fprintf(fp,"\tMOV\trdx,1\n");
+  fprintf(fp,"\tsyscall\n");
+  fprintf(fp,"\tret\n\n");
+}
+/* 
+print:
+    mov rax,1
+    mov rdi,1
+    mov rsi,text
+    mov rdx,3
+    syscall
+    
+    MOV	rax,60
+    MOV	rdi,0
+    syscall
+
+*/

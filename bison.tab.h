@@ -45,6 +45,7 @@ extern int yydebug;
 # define YYTOKENTYPE
   enum yytokentype
   {
+    END_OF_FILE = 0,
     T_GRATHER = 258,
     T_LESS = 259,
     T_GE = 260,
@@ -71,7 +72,7 @@ extern int yydebug;
     T_QUOTE = 281,
     T_LINE = 282,
     T_COMMA = 283,
-    T_EXIT = 284,
+    T_ROUND = 284,
     T_STR = 285,
     T_MOD = 286,
     NEG = 287
@@ -83,12 +84,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 35 "bison.y" /* yacc.c:1909  */
+#line 65 "bison.y" /* yacc.c:1909  */
 
 	double f;
   char *s;
+  struct exp *e;
+  struct loop *l;
 
-#line 92 "bison.tab.h" /* yacc.c:1909  */
+#line 95 "bison.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

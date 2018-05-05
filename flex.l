@@ -10,6 +10,7 @@
 #include "bison.tab.h"
 
 float calIndex(char);
+float splitRound(char[]);
 %}
 
 digits      [0-9]
@@ -23,14 +24,14 @@ else		[e][l][s][e]
 loop		[l][o][o][p]
 hex  		[h][e][x]
 str 		[A-Za-z0-9]*
-exit        [e][x][i][t]
+round       [0-9]+[n]
 ws          [ \t]+ 
 
 
 %%
 {rn}   	{ yylval.f = atof(yytext); return T_NUM; }
+{round} { yytext[strlen(yytext)-1]='\0'; yylval.f = atof(yytext); return T_ROUND; }
 {hexa}  { yylval.f = strtol(yytext, NULL, 16); return T_NUM; }
-{exit}  {return T_EXIT; }
 "+"     { return T_PLUS; }
 "-"     { return T_MINUS; }
 "*"     { return T_MULTIPLY; }
@@ -49,8 +50,9 @@ ws          [ \t]+
 "="	    { return T_EQUAL; }
 ":"     { return T_COLON; }
 "'"	    { return T_QUOTE; }
-\n      { return T_LINE; }
+\n     {  return T_LINE; }
 
+<<EOF>>     { return END_OF_FILE; }
 {cond}		{ return T_COND; }
 {else}		{ return T_ELSE; }
 {loop}		{ return T_LOOP; }
